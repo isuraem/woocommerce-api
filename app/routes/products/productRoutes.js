@@ -11,7 +11,7 @@ module.exports = function (router) {
 		productController.addProduct
 	);
 
-	router.get('/status',
+	router.post('/status',
 		jsonParser,
 		productController.statusProduct
 	);
