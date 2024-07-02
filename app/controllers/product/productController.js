@@ -13,3 +13,15 @@ module.exports.addProduct = async (req, res) => {
 	}
 };
 
+
+module.exports.statusProduct = async (req, res) => {
+	try {
+		const serviceResponse = await productService.statusProduct(req.body);
+		return res.status(200).json({ success: true, msg: serviceResponse.msg , showMessage:false });
+	} catch (err) {
+		Logger.log('addProduct', null, null,err);
+		return res.status(err.status || ResponseStatusCodes.INTERNAL_SERVER_ERROR).json({ success: false, msg: err.msg || ResponseCommonMessages.INTERNAL_SERVER_ERROR });
+	}
+};
+
+

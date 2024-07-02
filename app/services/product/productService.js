@@ -83,3 +83,20 @@ module.exports.addProduct = async (requestBody) => {
         throw new BadRequestException('Failed to create product');
     }
 };
+
+
+module.exports.statusProduct = async (requestBody) => {
+    try {
+        
+        return {
+            msg: 'Successfully created.'
+        };
+    } catch (error) {
+        if (error.response && error.response.data) {
+            console.error(error.response.data);
+        } else {
+            console.error(error);
+        }
+        throw new BadRequestException('Failed to create product');
+    }
+};

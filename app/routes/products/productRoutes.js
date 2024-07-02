@@ -10,4 +10,9 @@ module.exports = function (router) {
 		jsonParser,
 		productController.addProduct
 	);
+
+	router.get('/status',
+		jsonParser,
+		productController.statusProduct
+	);
 };
