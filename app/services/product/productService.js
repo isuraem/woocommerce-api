@@ -87,7 +87,7 @@ module.exports.addProduct = async (requestBody) => {
 
 module.exports.statusProduct = async (requestBody) => {
     try {
-        console.log("status");
+        console.log("status",requestBody);
         return {
             msg: 'Successfully created.'
         };
