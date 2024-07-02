@@ -5,7 +5,7 @@ require('dotenv').config();
 
 var appController = require("./app/app");
 
-const port = process.env.port;
+const port = process.env.PORT;
 
 app.get('/', (req, res) => {
     res.send('Hello World!');
