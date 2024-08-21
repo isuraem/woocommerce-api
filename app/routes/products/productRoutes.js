@@ -5,7 +5,6 @@ module.exports = function (router) {
 	//router controllers 
 	const productController = require('../../controllers/product/productController');
 
-
 	router.post('/add_product',
 		jsonParser,
 		productController.addProduct
@@ -15,4 +14,20 @@ module.exports = function (router) {
 		jsonParser,
 		productController.statusProduct
 	);
+
+	router.post('/add_product_variant',
+		jsonParser,
+		productController.addProductVariant
+	);
+
+	router.get('/get_product',
+		jsonParser,
+		productController.getProduct
+	);
+
+	router.post('/add_product_using_orderwise',
+		jsonParser,
+		productController.addProductUsingOrderwise
+	);
+
 };
