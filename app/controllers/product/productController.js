@@ -55,3 +55,23 @@ module.exports.addProductUsingOrderwise = async (req, res) => {
 		return res.status(err.status || ResponseStatusCodes.INTERNAL_SERVER_ERROR).json({ success: false, msg: err.msg || ResponseCommonMessages.INTERNAL_SERVER_ERROR });
 	}
 };
+
+module.exports.getAllProductUsingOrderwise = async (req, res) => {
+	try {
+		const serviceResponse = await productService.getAllProductUsingOrderwise(req.body);
+		return res.status(200).json({ success: true, msg: serviceResponse.msg , showMessage:false, data:  serviceResponse.data });
+	} catch (err) {
+		Logger.log('getAllProductUsingOrderwise', null, null,err);
+		return res.status(err.status || ResponseStatusCodes.INTERNAL_SERVER_ERROR).json({ success: false, msg: err.msg || ResponseCommonMessages.INTERNAL_SERVER_ERROR });
+	}
+};
+
+module.exports.getManyProductInOrderwise = async (req, res) => {
+	try {
+		const serviceResponse = await productService.getManyProductInOrderwise(req.body);
+		return res.status(200).json({ success: true, msg: serviceResponse.msg , showMessage:false, data:  serviceResponse.data });
+	} catch (err) {
+		Logger.log('getManyProductInOrderwise', null, null,err);
+		return res.status(err.status || ResponseStatusCodes.INTERNAL_SERVER_ERROR).json({ success: false, msg: err.msg || ResponseCommonMessages.INTERNAL_SERVER_ERROR });
+	}
+};

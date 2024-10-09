@@ -30,4 +30,13 @@ module.exports = function (router) {
 		productController.addProductUsingOrderwise
 	);
 
+	router.post('/get_all_product_using_orderwise',
+		jsonParser,
+		productController.getAllProductUsingOrderwise
+	);
+
+	router.post('/get_many_product_in_orderwise',
+		jsonParser,
+		productController.getManyProductInOrderwise
+	);
 };
