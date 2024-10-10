@@ -33,4 +33,4 @@ jobs:
         echo "${{ secrets.PORT }}" > .env
         echo "${{ secrets.SITE_URL }}" > .env
         echo "${{ secrets.TOKEN }}" > .env
-    
+    - run: pm2 restart apiServer
