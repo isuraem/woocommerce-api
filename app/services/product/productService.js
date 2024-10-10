@@ -159,7 +159,7 @@ module.exports.addProductUsingOrderwise = async (requestBody) => {
 
         const variantsResponse = await axios.get(`http://31.216.7.186/OWAPI/products/${product_id}/variants`, {
             headers: {
-                'Authorization': `Bearer ${process.env.Token}`,
+                'Authorization': `Bearer ${process.env.TOKEN}`,
             }
         });
         // console.log("data", variantsResponse.data)
@@ -174,7 +174,7 @@ module.exports.addProductUsingOrderwise = async (requestBody) => {
         const variantID = variants[0].variantID
         const variantsFullDetailsResponse = await axios.get(`http://31.216.7.186/OWAPI/variants/${variantID}`, {
             headers: {
-                'Authorization': `Bearer ${process.env.Token}`,
+                'Authorization': `Bearer ${process.env.TOKEN}`,
                 'Content-Type': 'application/json'
             }
         });
@@ -187,7 +187,7 @@ module.exports.addProductUsingOrderwise = async (requestBody) => {
 
         const variantsStockDetailsResponse = await axios.get(`http://31.216.7.186/OWAPI/stock/${variantID}`, {
             headers: {
-                'Authorization': `Bearer ${process.env.Token}`,
+                'Authorization': `Bearer ${process.env.TOKEN}`,
                 'Content-Type': 'application/json'
             }
         });
@@ -236,7 +236,7 @@ module.exports.addProductUsingOrderwise = async (requestBody) => {
         // // Add variants to WooCommerce
         // const wooCommerceResponse = await axios.post('https://your-woocommerce-site/wp-json/wc/v3/products/22/variations', variants, {
         //     headers: {
-        //         'Authorization': 'Bearer your_woocommerce_auth_token', // Replace with actual WooCommerce auth token
+        //         'Authorization': 'Bearer your_woocommerce_auth_TOKEN', // Replace with actual WooCommerce auth TOKEN
         //         'Content-Type': 'application/json'
         //     }
         // });
@@ -278,21 +278,21 @@ module.exports.getAllProductUsingOrderwise = async (requestBody) => {
 
         const optionDetails = await axios.post(`http://31.216.7.186/OWAPItest/system/export-definition/45`, data, {
             headers: {
-                "Authorization": `Bearer ${process.env.Token}`,
+                "Authorization": `Bearer ${process.env.TOKEN}`,
                 "Content-Type": "application/json"
             }
         })
 
         const categoryDetails = await axios.post(`http://31.216.7.186/OWAPItest/system/export-definition/57`, data, {
             headers: {
-                "Authorization": `Bearer ${process.env.Token}`,
+                "Authorization": `Bearer ${process.env.TOKEN}`,
                 "Content-Type": "application/json"
             }
         })
 
         // const productDetails = await axios.post(`http://31.216.7.186/OWAPItest/system/export-definition/61`, data, {
         //     headers: {
-        //         "Authorization": `Bearer ${process.env.Token}`,
+        //         "Authorization": `Bearer ${process.env.TOKEN}`,
         //         "Content-Type": "application/json"
         //     }
         // })
@@ -1205,7 +1205,7 @@ async function getTenProductsWithVariants() {
 
         const productDetails = await axios.post(`http://31.216.7.186/OWAPItest/system/export-definition/64`, data, {
             headers: {
-                "Authorization": `Bearer ${process.env.Token}`,
+                "Authorization": `Bearer ${process.env.TOKEN}`,
                 "Content-Type": "application/json"
             }
         });
@@ -1252,7 +1252,7 @@ module.exports.getManyProductInOrderwise = async () => {
 
         const productDetails = await axios.post(`http://31.216.7.186/OWAPItest/system/export-definition/64`, data, {
             headers: {
-                "Authorization": `Bearer ${process.env.Token}`,
+                "Authorization": `Bearer ${process.env.TOKEN}`,
                 "Content-Type": "application/json"
             }
         });
