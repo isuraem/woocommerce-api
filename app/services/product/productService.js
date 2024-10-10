@@ -112,7 +112,7 @@ module.exports.getProduct = async (requestBody) => {
             product_id
         } = requestBody;
 
-        const response = await WooCommerce.get(`products/${product_id}`);
+        const response = await WooCommerce.get(`products`);
         console.log(response.data);
 
         return {
