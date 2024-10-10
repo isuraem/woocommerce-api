@@ -2,9 +2,9 @@ const WooCommerceRestApi = require("@woocommerce/woocommerce-rest-api").default;
 require('dotenv').config();
 
 const WooCommerce = new WooCommerceRestApi({
-    url: process.env.site_url,
-    consumerKey: process.env.consumerKey,
-    consumerSecret: process.env.consumerSecret,
+    url: process.env.SITE_URL,
+    consumerKey: process.env.CONSUMERKEY,
+    consumerSecret: process.env.CONSUMERSECRET,
     version: "wc/v3"
 });
 
