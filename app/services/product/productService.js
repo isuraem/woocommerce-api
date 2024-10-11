@@ -1241,6 +1241,7 @@ async function getTenProductsWithVariants() {
         throw new BadRequestException('Failed to get product details');
     }
 }
+
 module.exports.getManyProductInOrderwise = async () => {
     try {
         const data = [
@@ -1289,5 +1290,24 @@ module.exports.getManyProductInOrderwise = async () => {
             console.error(error);
         }
         throw new BadRequestException('Failed to get product details');
+    }
+};
+
+module.exports.getOrderWoocommerce = async (requestBody) => {
+    try {
+       
+        console.log("Data", requestBody)
+        return {
+            msg: 'Successfully get order details',
+            data: requestBody
+        };
+
+    } catch (error) {
+        if (error.response && error.response.data) {
+            console.error(error.response.data);
+        } else {
+            console.error(error);
+        }
+        throw new BadRequestException('Failed to get order details');
     }
 };
