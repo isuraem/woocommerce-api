@@ -35,11 +35,6 @@ module.exports = function (router) {
 		productController.getAllProductUsingOrderwise
 	);
 
-	router.post('/get_many_product_in_orderwise',
-		jsonParser,
-		productController.getManyProductInOrderwise
-	);
-
 	router.post('/get_order_woocommerce',
 		jsonParser,
 		productController.getOrderWoocommerce
