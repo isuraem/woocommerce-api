@@ -44,41 +44,41 @@ module.exports.getOrderWoocommerce = async (requestBody) => {
 
         console.log("Matching Variants Data", matchingVariantsData);
 
-        matchingVariantsData.forEach(async variants => {
+        if(matchingVariantsData){
+            matchingVariantsData.forEach(async variants => {
 
-            const data = {
-                "supplierId": variants.matching_variant.sd_id,
-                "supplierContactId": variants.matching_variant.sc_id,
-                "deliveryAddress": deliveryAddress,
-                "lines": [
-                    {
-                        "variantId": variants.matching_variant.vad_id,
-                        "qtyOrdered": variants.line_item.quantity,
-                        "vatRateId": variants.matching_variant.vr_id,
-                        "stockLocationId": variants.matching_variant.sl_id,
-                        "binNumberId": variants.matching_variant.vsl_bn_id,
-                        "unitCost" : variants.matching_variant.vapi_estimated_cost
-                    }
-                ]
-
-            }
-
-            const stockData = {
-                "stockLocationID": variants.matching_variant.sl_id,
-                "binID": variants.matching_variant.vsl_bn_id,
-                "quantity": variants.line_item.quantity,
-                "variantID": variants.matching_variant.vad_id
-            }
-
-            const newAddedResponse = await addOrderIntoOW(data);
-
-            if(newAddedResponse){
-                await reduceVariantStock(stockData)
-            }
-            console.log("new added :", newAddedResponse)
-
-        });
-
+                const data = {
+                    "supplierId": variants.matching_variant.sd_id,
+                    "supplierContactId": variants.matching_variant.sc_id,
+                    "deliveryAddress": deliveryAddress,
+                    "lines": [
+                        {
+                            "variantId": variants.matching_variant.vad_id,
+                            "qtyOrdered": variants.line_item.quantity,
+                            "vatRateId": variants.matching_variant.vr_id,
+                            "stockLocationId": variants.matching_variant.sl_id,
+                            "binNumberId": variants.matching_variant.vsl_bn_id,
+                            "unitCost" : variants.matching_variant.vapi_estimated_cost
+                        }
+                    ]
+    
+                }
+    
+                const stockData = {
+                    "stockLocationID": variants.matching_variant.sl_id,
+                    "binID": variants.matching_variant.vsl_bn_id,
+                    "quantity": variants.line_item.quantity,
+                    "variantID": variants.matching_variant.vad_id
+                }
+    
+                const newAddedResponse = await addOrderIntoOW(data);
+    
+                if(newAddedResponse){
+                    await reduceVariantStock(stockData)
+                }
+            });
+        }
+        
         return {
             msg: 'Successfully retrieved order details and matching variants',
             data: matchingVariantsData // Return the matching variants for all line items
