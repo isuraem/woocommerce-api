@@ -323,7 +323,6 @@ module.exports.getAllProductUsingOrderwise = async (requestBody) => {
                     let responseAttribute = await WooCommerce.post("products/attributes", newAttribute)
 
                     if (responseAttribute.data && optionsArray) {
-                        console.log("awa");
                         await addingAttributesTerms(optionsArray, responseAttribute.data.id)
                     }
                 } catch (error) {
@@ -334,30 +333,7 @@ module.exports.getAllProductUsingOrderwise = async (requestBody) => {
             });
         }
 
-        // if (misMatchCateData && misMatchCateData.length != 0) {
-        //     misMatchCateData.forEach(async mismatchData => {
-        //         await delay(1000);
-        //         let parentid = null;
-        //         const cateResponse = await fetchCategoriesWithParentNames();
 
-        //         const newAttribute = {
-        //             name: mismatchData.ctn_description,
-        //             slug: `ow_${mismatchData.ctn_description}`,
-        //         };
-
-        //         if (mismatchData.parent_description) {
-        //             parentid = await findParentCategory(cateResponse, mismatchData.parent_description)
-        //             newAttribute.parent = parentid;
-        //         }
-        //         try {
-        //             await WooCommerce.post("products/categories", newAttribute)
-        //             await delay(1000);
-        //         } catch (error) {
-        //             console.error(error);
-        //             throw new BadRequestException('Failed to create categories');
-        //         }
-        //     });
-        // }
         if (misMatchCateData && misMatchCateData.length !== 0) {
             for (const mismatchData of misMatchCateData) {
                 let parentid = null;
@@ -407,7 +383,15 @@ module.exports.getAllProductUsingOrderwise = async (requestBody) => {
                 }
             }
         }
-        const productDetails = await getTenProductsWithVariants()
+        const orderwiseProductDetails = await getTenProductsWithVariants();
+
+        const woocommerceProductsDetails = await getProductsFromWoocommerce();
+
+        const productDetails = await compareMismatchedProducts(orderwiseProductDetails,woocommerceProductsDetails);
+
+        console.log("length of products: ",productDetails)
+
+
 
         if (productDetails.length > 0) {
 
@@ -487,8 +471,7 @@ module.exports.getAllProductUsingOrderwise = async (requestBody) => {
                     attributePosition++
                     console.log("att data: ", atrributeData)
                 }
-                parentProductData.attributes = attributeArray
-                // parentProductData.sku = `${productDummy.pd_id}_${productDummy.pd_product_code}_new`
+                parentProductData.attributes = attributeArray;
 
                 console.log("att data: ", attributeArray)
                 console.log("data", parentProductData)
@@ -504,23 +487,49 @@ module.exports.getAllProductUsingOrderwise = async (requestBody) => {
 
                 if (newCreatedProduct.data.id) {
                     const productId = newCreatedProduct.data.id;
-    
+
+                    try {
+                        let data = {
+                            sku: `ow_${mainProduct.pd_id}_${newCreatedProduct.data.id}`
+                        }
+                        const updateProductSku = await WooCommerce.put(`products/${newCreatedProduct.data.id}`, data);
+                        console.log(updateProductSku.data);
+                    } catch (error) {
+                        console.error(error);
+                    }
+
                     for (const variantProduct of singleProduct.variants) {
-                        let attributeResponseArray = []
-                        let requestdata = {
+                        let attributeResponseArray = [];
+                        let requestdata = null
+                        requestdata = {
                             regular_price: String(variantProduct.vafp_rsp_exc_vat),
                             attributes: null,
                             stock_quantity: Number(variantProduct.vasq_free_stock_quantity),
-                            description: String(variantProduct.vad_description)
+                            description: String(variantProduct.vad_description),
+                            image: null
                         };
-    
+
+                        // Setting image properties
+                        const image_name = variantProduct.vwsi_filepath.split("\\").pop();
+                        console.log("image data", variantProduct.vwsi_filepath);
+                        const imageUrl = `https://glenappin.com/images/product/l/${image_name}`;
+
+                        console.log("imageUrl: ", imageUrl)
+                        let imageData = {
+                            src: String(imageUrl),
+                            name: String(image_name)
+                        }
+
+                        requestdata.image = imageData;
+
+
                         const optionNames = [
                             variantProduct.option_name_1,
                             variantProduct.option_name_2,
                             variantProduct.option_name_3,
                             variantProduct.option_name_4
                         ].filter(option => option !== null);
-    
+
                         console.log(optionNames);
                         if (optionNames.length == attributeArray.length) {
                             for (let i = 0; i < optionNames.length; i++) {
@@ -535,174 +544,29 @@ module.exports.getAllProductUsingOrderwise = async (requestBody) => {
                         console.log("request data", productId)
                         await delay(1000);
                         try {
-                            const response = await WooCommerce.post(`products/${productId}/variations`, requestdata);
-                            console.log("data", response.data)
+                            const newCreatedVariations = await WooCommerce.post(`products/${productId}/variations`, requestdata);
+                            // Once the variation is created, proceed to update its SKU
+                            const variationId = newCreatedVariations.data.id; // Assuming 'data.id' contains the new variation's ID
+                            const skuData = {
+                                sku: `ow_${variantProduct.vad_id}_${variationId}`
+                            };
+
+                            // Update the SKU for the newly created variation
+                            const updatedVariation = await WooCommerce.put(`products/${productId}/variations/${variationId}`, skuData);
+
+                            console.log("Updated variation SKU:", updatedVariation.data);
                         }
                         catch (error) {
                             console.log("error", error)
                         }
-    
+
                     }
                 }
 
             }
 
-
-
         }
-        // if (productDetails.data) {
 
-        //     const cateResponse = await fetchCategoriesWithParentNames();
-
-        //     const productDetailsArray = productDetails.data
-        //     // let parentProductData = {
-        //     //     "name": null,
-        //     //     "type": "variable",
-        //     //     "status": "publish",
-        //     //     "description": null,
-        //     //     "short_description": null,
-        //     //     "categories": null,
-        //     //     "images": [],
-        //     //     "attributes": null,
-        //     //     "stock_status": "instock",
-        //     //     "manage_stock": true,
-        //     //     "sku": null,
-        //     //     "stock_quantity": 50
-        //     // }
-        //     let parentProductData = {
-        //         name: null,
-        //         type: "variable",
-        //         status: "publish",
-        //         description: null,
-        //         short_description: null,
-        //         categories: null,
-        //         images: [],
-        //         attributes: null,
-        //         stock_status: "instock",
-        //     }
-        //     let productDummy = productDetailsArray[0]
-
-        //     parentProductData.name = productDummy.pd_description;
-        //     parentProductData.description = productDummy.pd_description;
-
-        //     const matchedCategory = await categoryDetails.data.find(category => {
-        //         console.log(`Comparing: ${productDummy.category_ids} to ${category.ctn_id}`);
-        //         return Number(productDummy.category_ids) === Number(category.ctn_id);
-        //     });
-
-        //     if (matchedCategory) {
-        //         const catId = [
-        //             {
-        //                 "id": await findCategoryWithObj(cateResponse, matchedCategory)
-        //             }
-        //         ]
-
-        //         parentProductData.categories = catId;
-
-        //     }
-
-        //     const Attributedescriptions = [
-        //         productDummy.pd_option_1_description,
-        //         productDummy.pd_option_2_description,
-        //         productDummy.pd_option_3_description,
-        //         productDummy.pd_option_4_description
-        //     ].filter(description => description !== null);
-
-        //     console.log(Attributedescriptions);
-
-
-        //     const attributeArray = []
-        //     let attributePosition = 0;
-        //     for (const attribute of Attributedescriptions) {
-        //         let oprtionArray = []
-        //         let atrributeData = await finddAttributesWithObj(response.data, attribute)
-        //         try {
-        //             let termsArray = await WooCommerce.get(`products/attributes/${atrributeData.id}/terms`);
-        //             console.log("term array", termsArray.data)
-        //             if (termsArray.data.length > 0) {
-        //                 termsArray.data.forEach(term => {
-        //                     oprtionArray.push(term.name)
-        //                 })
-        //             }
-        //         }
-        //         catch (error) {
-        //             console.log("error", error)
-        //         }
-
-        //         console.log("array", oprtionArray)
-        //         let data = {
-        //             "id": atrributeData.id,
-        //             "name": atrributeData.name,
-        //             "visible": true,
-        //             "variation": true,
-        //             "options": oprtionArray,
-        //             "position": attributePosition
-        //         }
-        //         attributeArray.push(data);
-        //         attributePosition++
-        //         console.log("att data: ", atrributeData)
-        //     }
-        //     parentProductData.attributes = attributeArray
-        //     // parentProductData.sku = `${productDummy.pd_id}_${productDummy.pd_product_code}_new`
-
-        //     console.log("att data: ", attributeArray)
-        //     console.log("data", parentProductData)
-
-        //     let newCreatedProduct = null;
-
-        //     try {
-        //         newCreatedProduct = await WooCommerce.post("products", parentProductData);
-        //         console.log(newCreatedProduct.data);
-        //     } catch (error) {
-        //         console.error(error);
-        //     }
-
-        //     if (newCreatedProduct.data.id) {
-        //         const productId = newCreatedProduct.data.id;
-
-        //         for (const variantProduct of productDetails.data) {
-        //             let attributeResponseArray = []
-        //             let requestdata = {
-        //                 regular_price: String(variantProduct.vafp_rsp_exc_vat),
-        //                 attributes: null,
-        //                 stock_quantity: Number(variantProduct.vasq_free_stock_quantity),
-        //                 description: String(variantProduct.vad_description)
-        //             };
-
-        //             const optionNames = [
-        //                 variantProduct.option_name_1,
-        //                 variantProduct.option_name_2,
-        //                 variantProduct.option_name_3,
-        //                 variantProduct.option_name_4
-        //             ].filter(option => option !== null);
-
-        //             console.log(optionNames);
-        //             if (optionNames.length == attributeArray.length) {
-        //                 for (let i = 0; i < optionNames.length; i++) {
-        //                     let data = {
-        //                         id: Number(attributeArray[i].id),
-        //                         options: String(optionNames[i])
-        //                     }
-        //                     attributeResponseArray.push(data)
-        //                 }
-        //             }
-        //             requestdata.attributes = attributeResponseArray
-        //             console.log("request data", productId)
-        //             await delay(1000);
-        //             try {
-        //                 const response = await WooCommerce.post(`products/${productId}/variations`, requestdata);
-        //                 console.log("data", response.data)
-        //             }
-        //             catch (error) {
-        //                 console.log("error", error)
-        //             }
-
-        //         }
-        //     }
-
-
-        // }
-        // console.log("Product Data: ", productDetails.data)
         return {
             msg: 'Successfully created.',
             data: response.data
@@ -1203,7 +1067,7 @@ async function getTenProductsWithVariants() {
             }
         ];
 
-        const productDetails = await axios.post(`http://31.216.7.186/OWAPItest/system/export-definition/64`, data, {
+        const productDetails = await axios.post(`http://31.216.7.186/OWAPItest/system/export-definition/66`, data, {
             headers: {
                 "Authorization": `Bearer ${process.env.TOKEN}`,
                 "Content-Type": "application/json"
@@ -1228,7 +1092,7 @@ async function getTenProductsWithVariants() {
         });
 
         // Get the first 10 unique products and their variants
-        const first10UniqueProducts = Array.from(productMap.values()).slice(0, 10);
+        const first10UniqueProducts = Array.from(productMap.values()).slice(0, 4);
         console.log("length :", first10UniqueProducts[0].variants.length)
         return first10UniqueProducts
 
@@ -1242,64 +1106,14 @@ async function getTenProductsWithVariants() {
     }
 }
 
-module.exports.getManyProductInOrderwise = async () => {
-    try {
-        const data = [
-            {
-                name: "",
-                value: null
-            }
-        ];
-
-        const productDetails = await axios.post(`http://31.216.7.186/OWAPItest/system/export-definition/64`, data, {
-            headers: {
-                "Authorization": `Bearer ${process.env.TOKEN}`,
-                "Content-Type": "application/json"
-            }
-        });
-
-        // Assuming productDetails.data contains an array of products with potential variants
-        const products = productDetails.data;
-
-        // Group variants under their main product by 'productId' or similar unique identifier
-        const productMap = new Map();
-        products.forEach(product => {
-            const productId = product.pd_id; // Use the appropriate unique product identifier
-            if (!productMap.has(productId)) {
-                productMap.set(productId, {
-                    mainProduct: product, // or however you want to represent the main product
-                    variants: [product] // Initialize variants array with the product itself
-                });
-            } else {
-                productMap.get(productId).variants.push(product); // Add variant to the existing product
-            }
-        });
-
-        // Get the first 10 unique products and their variants
-        const first10UniqueProducts = Array.from(productMap.values()).slice(0, 10);
-        console.log("length :", first10UniqueProducts[0].variants.length)
-        return {
-            msg: 'Successfully retrieved first 10 unique products with variants',
-            data: first10UniqueProducts
-        };
-
-    } catch (error) {
-        if (error.response && error.response.data) {
-            console.error(error.response.data);
-        } else {
-            console.error(error);
-        }
-        throw new BadRequestException('Failed to get product details');
-    }
-};
-
 module.exports.getOrderWoocommerce = async (requestBody) => {
     try {
-       
+
         console.log("Data", requestBody)
+
         return {
             msg: 'Successfully get order details',
-            data: requestBody
+            data: addingorder
         };
 
     } catch (error) {
@@ -1311,3 +1125,95 @@ module.exports.getOrderWoocommerce = async (requestBody) => {
         throw new BadRequestException('Failed to get order details');
     }
 };
+
+async function getProductsFromWoocommerce(){
+    try {
+        let allProducts = [];
+        let page = 1;
+        let perPage = 100;
+        let totalPages = 1; // Initial value, will be updated after the first request
+
+        // Make an initial request to get the total number of pages
+        const initialResponse = await WooCommerce.get("products", {
+            params: {
+                per_page: perPage,
+                page: page
+            }
+        });
+
+        totalPages = parseInt(initialResponse.headers['x-wp-totalpages'], 10); // WooCommerce returns total pages in this header
+        allProducts = allProducts.concat(initialResponse.data);
+
+        // Create an array of promises for the remaining pages
+        const requests = [];
+        for (let i = 2; i <= totalPages; i++) {
+            requests.push(WooCommerce.get("products", {
+                params: {
+                    per_page: perPage,
+                    page: i
+                }
+            }));
+        }
+
+        // Fetch all pages in parallel
+        const responses = await Promise.all(requests);
+
+        // Concatenate all products from the responses
+        responses.forEach(response => {
+            allProducts = allProducts.concat(response.data);
+        });
+
+        console.log(allProducts.length); // Log the total number of products
+
+        return allProducts;
+
+    } catch (error) {
+        if (error.response && error.response.data) {
+            console.error(error.response.data);
+        } else {
+            console.error(error);
+        }
+        throw new BadRequestException('Failed to retrieve products');
+    }
+};
+
+async function compareMismatchedProducts(orderwiseProducts, woocommerceProducts) {
+    try {
+        // Extract WooCommerce product SKUs and map them to the 'pd_id' format (as strings)
+        const wooCommercePdIds = [...new Set(woocommerceProducts
+            .map(product => {
+                // Check if the SKU exists and is not null
+                if (product.sku && typeof product.sku === 'string') {
+                    const skuParts = product.sku.split('_');
+                    if (skuParts.length === 3) {
+                        return skuParts[1]; // The 'pd_id' part of the SKU
+                    }
+                }
+                return null;
+            })
+            .filter(pdId => pdId !== null))]; // Remove duplicates using Set and convert it back to an array
+
+        console.log("Unique WooCommerce pd_ids:", wooCommercePdIds); // Log WooCommerce pd_ids
+
+        // Filter out matched OrderWise products
+        const remainingOrderwiseProducts = orderwiseProducts.filter(orderwiseProduct => {
+            const orderwisePdId = String(orderwiseProduct.mainProduct.pd_id); // Convert pd_id to string
+            
+            // Log the comparison status
+            const isMatched = wooCommercePdIds.includes(orderwisePdId);
+
+            return !isMatched;
+        });
+
+        return remainingOrderwiseProducts; // Return only unmatched products
+
+    } catch (error) {
+        if (error.response && error.response.data) {
+            console.error(error.response.data);
+        } else {
+            console.error(error);
+        }
+        throw new BadRequestException('Failed to compare products');
+    }
+}
+
