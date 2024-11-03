@@ -10,11 +10,6 @@ module.exports = function (router) {
 		productController.addProduct
 	);
 
-	router.post('/status',
-		jsonParser,
-		productController.statusProduct
-	);
-
 	router.post('/add_product_variant',
 		jsonParser,
 		productController.addProductVariant
@@ -35,8 +30,4 @@ module.exports = function (router) {
 		productController.getAllProductUsingOrderwise
 	);
 
-	router.post('/get_order_woocommerce',
-		jsonParser,
-		productController.getOrderWoocommerce
-	);
 };
