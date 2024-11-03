@@ -14,4 +14,21 @@ module.exports = function (router) {
 		jsonParser,
 		productController.getManyProductInOrderwise
 	);
+
+	router.post('/create_sale_order_to_orderwise',
+		jsonParser,
+		productController.createSaleOrderToOW
+	);
+
+	router.post('/get_ten_simple_products_ow',
+		jsonParser,
+		productController.getTenSimpleProductOW
+	);
+
+
+	router.post('/get_prodcuts_and_variants',
+		jsonParser,
+		productController.getProductsAndVariantsFromWoocommerce
+	);
+	
 };
