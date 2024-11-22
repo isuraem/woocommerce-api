@@ -289,11 +289,8 @@ async function getTenProductsWithVariantsOW() {
             }
         });
 
-        // Get the first 10 unique products and their variants
-        const first10UniqueProducts = Array.from(productMap.values()).slice(0, 10);
-
-        return first10UniqueProducts
-
+        return Array.from(productMap.values());
+        
     } catch (error) {
         if (error.response && error.response.data) {
             console.error(error.response.data);
@@ -319,9 +316,9 @@ async function getTenSimpleProductOW(){
                 "Content-Type": "application/json"
             }
         });
-        const firstTenProducts = productDetails.data.slice(0, 10);
-
-        return firstTenProducts
+        const Products = productDetails.data;
+        console.log("length: ", Products.length)
+        return productDetails.data
             
 
     } catch (error) {
