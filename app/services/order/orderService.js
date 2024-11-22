@@ -23,60 +23,99 @@ module.exports.getOrderWoocommerce = async (requestBody) => {
         console.log("dilvery data ", deliveryAddress)
 
         // Fetch the product and variant data (assuming this returns a list of products with variants)
-        const productAndVariantsData = await getTenProductsWithVariants();
+        const productAndVariantsData = await getTenProductsWithVariantsOW();
+
+        const simpleProductData = await getTenSimpleProductOW();
 
         // Initialize an array to store the results for all line items
         const matchingVariantsData = [];
 
-        // Iterate over all line items in the order
         for (const lineItem of requestBody.line_items) {
             const sku = lineItem.sku;
-
-            // Get matching variant for each SKU from the product and variants data
-            const matchingVariant = await getMatchingVariant(sku, productAndVariantsData);
-
+            let matchingVariant = null;
+        
+            if (lineItem.variation_id !== 0) {
+                // Try to get a matching variant for SKUs with a variation ID
+                matchingVariant = await getMatchingVariant(sku, productAndVariantsData);
+            }
+        
+            // If no matching variant was found, try to get a simple product variant
+            else {
+                matchingVariant = await getMatchingSimpleVariant(sku, simpleProductData);
+            }
+        
             // Push the matching variant details to the result array
             matchingVariantsData.push({
-                line_item: lineItem, // Original line item data
-                matching_variant: matchingVariant[0] // Matching variant details
+                line_item: lineItem,              // Original line item data
+                matching_variant: matchingVariant ? matchingVariant[0] : null // Matching variant details
             });
         }
 
         console.log("Matching Variants Data", matchingVariantsData);
+        console.log("Matching Variants Data length", matchingVariantsData.length);
+        const totalShippingCost = requestBody.shipping_lines.reduce((sum, line) => sum + parseFloat(line.total), 0);
+        let OrderGross = 0;
+        let LineItems = [];
+        let itemNumber = 0;
+        for(const product of matchingVariantsData) {
+            OrderGross =+ product.line_item.subtotal;
+             // Parse the JSON string into an array of objects
+            const stockLocations = JSON.parse(product.matching_variant.stock_locations);
 
-        if(matchingVariantsData){
-            matchingVariantsData.forEach(async variants => {
 
-                const data = {
-                    "supplierId": variants.matching_variant.sd_id,
-                    "supplierContactId": variants.matching_variant.sc_id,
-                    "deliveryAddress": deliveryAddress,
-                    "lines": [
-                        {
-                            "variantId": variants.matching_variant.vad_id,
-                            "qtyOrdered": variants.line_item.quantity,
-                            "vatRateId": variants.matching_variant.vr_id,
-                            "stockLocationId": variants.matching_variant.sl_id,
-                            "binNumberId": variants.matching_variant.vsl_bn_id,
-                            "unitCost" : variants.matching_variant.vapi_estimated_cost
-                        }
-                    ]
-    
-                }
-    
-                const stockData = {
-                    "stockLocationID": variants.matching_variant.sl_id,
-                    "binID": variants.matching_variant.vsl_bn_id,
-                    "quantity": variants.line_item.quantity,
-                    "variantID": variants.matching_variant.vad_id
-                }
-    
-                const newAddedResponse = await addOrderIntoOW(data);
-    
-                if(newAddedResponse){
-                    await reduceVariantStock(stockData)
-                }
-            });
+            const availableLocation = getFirstAvailableStockLocation(stockLocations);
+
+            let data = {
+                variantCode : product.matching_variant.vad_variant_code,
+                itemNumber: ++itemNumber,
+                quantity: product.line_item.quantity,
+                itemGross : product.matching_variant.vafp_rsp_exc_vat,
+                taxRateId : product.matching_variant.vr_id,
+                stockLocationId : availableLocation.id
+            }
+            LineItems.push(data)
+        }
+        let today = new Date();
+        let datePart = today.toISOString().slice(2, 8).replace(/-/g, ""); // YYMMDD format
+        let timePart = `${String(today.getHours()).padStart(2, '0')}${String(today.getMinutes()).padStart(2, '0')}${String(today.getSeconds()).padStart(2, '0')}`;
+        
+        let generatedeCommerceOrderNumber = `${datePart}${timePart}`;
+        let session_id = 1;
+        
+        let saleOrderData = {
+            customer : {
+                id : 1375
+            },
+            orderHeader: {
+                systemOrderType: 1,
+                deliveryMethodId: 1,
+                orderGross: OrderGross,
+                deliveryGross: totalShippingCost,
+                eCommerceOrderNumber: generatedeCommerceOrderNumber,
+                orderDate: new Date().toISOString().slice(0, -1),
+            },
+            customerDeliveryAddress: {
+                deliveryName: deliveryAddress.name,
+                contactName: deliveryAddress.contact,
+                address1: deliveryAddress.address1,
+                address2: deliveryAddress.address2,
+                town: deliveryAddress.town,
+                country: deliveryAddress.county,
+                postcode: deliveryAddress.postcode,
+                telephone: deliveryAddress.telephone,
+                email: deliveryAddress.email,
+                deliveryMethodId: 1
+            },
+            orderLines: LineItems,
+            
+        }
+
+        try{
+            await addSaleOrderIntoOW(saleOrderData, session_id);
+
+        }catch(err){
+            console.log("Error message: ", err);
+            throw new BadRequestException('Failed to add order into OrderWise');
         }
         
         return {
@@ -91,6 +130,36 @@ module.exports.getOrderWoocommerce = async (requestBody) => {
             console.error(error);
         }
         throw new BadRequestException('Failed to get order details or another error occurred');
+    }
+};
+
+// Function to get the first location with available stock
+function getFirstAvailableStockLocation(stockLocations) {
+    return stockLocations.find(location => location.free_stock > 0);
+  }
+
+async function addSaleOrderIntoOW(saleOrderDetails, sessionId) {
+    try {
+       
+        console.log("Validated Data", saleOrderDetails);
+
+        const addingorder = await axios.post(`http://31.216.7.186/OWAPItest/sales/order?session_id=${sessionId}`, saleOrderDetails, {
+            headers: {
+                "Authorization": `Bearer ${process.env.TOKEN}`,
+                "Content-Type": "application/json"
+            }
+        });
+
+        return addingorder.data
+        console.log("data", addingorder)
+
+    } catch (error) {
+        if (error.response && error.response.data) {
+            console.error(error.response.data);
+        } else {
+            console.error(error);
+        }
+        throw new BadRequestException('Failed to add order');
     }
 };
 
@@ -187,7 +256,7 @@ module.exports.addOrderOW = async (requestBody) => {
 };
 
 
-async function getTenProductsWithVariants() {
+async function getTenProductsWithVariantsOW() {
     try {
         const data = [
             {
@@ -196,7 +265,7 @@ async function getTenProductsWithVariants() {
             }
         ];
 
-        const productDetails = await axios.post(`http://31.216.7.186/OWAPItest/system/export-definition/66`, data, {
+        const productDetails = await axios.post(`http://31.216.7.186/OWAPItest/system/export-definition/70`, data, {
             headers: {
                 "Authorization": `Bearer ${process.env.TOKEN}`,
                 "Content-Type": "application/json"
@@ -221,7 +290,7 @@ async function getTenProductsWithVariants() {
         });
 
         // Get the first 10 unique products and their variants
-        const first10UniqueProducts = Array.from(productMap.values()).slice(0, 4);
+        const first10UniqueProducts = Array.from(productMap.values()).slice(0, 10);
 
         return first10UniqueProducts
 
@@ -235,6 +304,35 @@ async function getTenProductsWithVariants() {
     }
 }
 
+async function getTenSimpleProductOW(){
+    try {
+        const data = [
+            {
+                name: "",
+                value: null
+            }
+        ];
+
+        const productDetails = await axios.post(`http://31.216.7.186/OWAPItest/system/export-definition/71`, data, {
+            headers: {
+                "Authorization": `Bearer ${process.env.TOKEN}`,
+                "Content-Type": "application/json"
+            }
+        });
+        const firstTenProducts = productDetails.data.slice(0, 10);
+
+        return firstTenProducts
+            
+
+    } catch (error) {
+        if (error.response && error.response.data) {
+            console.error(error.response.data);
+        } else {
+            console.error(error);
+        }
+        throw new BadRequestException('Failed to get product details');
+    }
+};
 
 async function getMatchingVariant(requestVariantSku, orderwiseProducts) {
     try {
@@ -257,6 +355,32 @@ async function getMatchingVariant(requestVariantSku, orderwiseProducts) {
         }, []);
 
         return matchedVariants; // Return only the matched variant(s)
+
+    } catch (error) {
+        if (error.response && error.response.data) {
+            console.error(error.response.data);
+        } else {
+            console.error(error);
+        }
+        throw new BadRequestException('Failed to compare products');
+    }
+}
+
+async function getMatchingSimpleVariant(requestSimpleProductSku, orderwiseProducts) {
+    try {
+        // Extract the product SKU part after the underscore
+        const simpleProductSku = requestSimpleProductSku.split('_')[1];
+        console.log("new: ", simpleProductSku);
+        console.log("length: ", orderwiseProducts.length);
+
+        // Filter and return only the matching products based on pd_id
+        const matchedVariants = orderwiseProducts.filter(orderwiseProduct => {
+            const orderwisePdId = String(orderwiseProduct.pd_id); // Convert pd_id to string
+            console.log("pro id: ", orderwiseProduct.pd_id);
+            return orderwisePdId === simpleProductSku; // Compare the pd_id with the extracted SKU
+        });
+
+        return matchedVariants; 
 
     } catch (error) {
         if (error.response && error.response.data) {

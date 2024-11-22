@@ -25,10 +25,13 @@ module.exports = function (router) {
 		productController.getTenSimpleProductOW
 	);
 
-
 	router.post('/get_prodcuts_and_variants',
 		jsonParser,
 		productController.getProductsAndVariantsFromWoocommerce
 	);
 	
+	router.post('/edit_meta_data',
+		jsonParser,
+		productController.editMetaData
+	);
 };
