@@ -214,7 +214,7 @@ module.exports.getAllProductUsingOrderwise = async (requestBody) => {
 
         const categoryResponse = await fetchCategoriesWithParentNames();
 
-        const optionDetails = await axios.post(`http://31.216.7.186/OWAPItest/system/export-definition/45`, data, {
+        const optionDetails = await axios.post(`http://31.216.7.186/OWAPItest/system/export-definition/69`, data, {
             headers: {
                 "Authorization": `Bearer ${process.env.TOKEN}`,
                 "Content-Type": "application/json"
@@ -245,20 +245,33 @@ module.exports.getAllProductUsingOrderwise = async (requestBody) => {
                     order_by: "menu_order"
                 };
 
+                let optionsArray = [];
 
-                const optionsArray = mismatchData.options.split(',').map(option => option.trim());
+                if (mismatchData.options) {
+                    try {
+                        optionsArray = JSON.parse(mismatchData.options);  // Parse the JSON string
+                    } catch (error) {
+                        console.error("Failed to parse options:", error);
+                    }
+                }
 
+                // Now you can map over the parsed options array
+                const optionArrayWithImg = optionsArray.map(option => ({
+                    name: option.name || "",
+                    image: option.image ? option.image.split('\\').pop() : ""  // Handle image path correctly
+                }));
+
+                console.log("option array: ", optionArrayWithImg);
                 try {
                     let responseAttribute = await WooCommerce.post("products/attributes", newAttribute)
 
-                    if (responseAttribute.data && optionsArray) {
-                        await addingAttributesTerms(optionsArray, responseAttribute.data.id)
+                    if (responseAttribute.data && optionArrayWithImg) {
+                        await addingAttributesTermsWithDescription(optionArrayWithImg, responseAttribute.data.id)
                     }
                 } catch (error) {
                     console.log("error attribute:", error)
                     throw new BadRequestException('Failed to create Attribute');
                 }
-
             });
         }
 
@@ -313,7 +326,7 @@ module.exports.getAllProductUsingOrderwise = async (requestBody) => {
 
         const woocommerceProductsDetails = await getProductsFromWoocommerce();
 
-        const productDetails = await compareMismatchedProducts(orderwiseProductDetails,woocommerceProductsDetails);
+        const productDetails = await compareMismatchedProducts(orderwiseProductDetails, woocommerceProductsDetails);
 
         if (productDetails.length > 0) {
 
@@ -331,23 +344,37 @@ module.exports.getAllProductUsingOrderwise = async (requestBody) => {
                     images: [],
                     attributes: null,
                     stock_status: "instock",
-                }
-                let mainProduct = singleProduct.mainProduct
-                let mainProImgArray = [];
-
-                // Setting image properties
-                const mainProductImgName = mainProduct.vwsi_filepath.split("\\").pop();
-                const mainProductImgUrl = `https://glenappin.com/images/product/l/${mainProductImgName}`;
-
-                let mainProductImageData = {
-                    src: String(mainProductImgUrl),
-                    name: String(mainProductImgName)
+                    meta_data: null
                 }
                 
-                mainProImgArray.push(mainProductImageData)
+                let mainProduct = singleProduct.mainProduct
+                let mainProImgArray = [];
+                let metaData = [
+                    {
+                        key: 'ow_sku',
+                        value: mainProduct.pd_product_code
+                    }
+
+                ];
+                if (mainProduct.vwsi_filepath) {
+
+                    const mainProductImgName = mainProduct.vwsi_filepath ? mainProduct.vwsi_filepath.split("\\").pop() : null;
+
+                    const mainProductImgUrl = mainProductImgName ? `https://glenappin.com/images/product/l/${mainProductImgName}` : null;
+
+                    if (mainProductImgName) {
+                        let mainProductImageData = {
+                            src: String(mainProductImgUrl),
+                            name: String(mainProductImgName)
+                        }
+                        mainProImgArray.push(mainProductImageData)
+                    }
+                }
+
                 parentProductData.images = mainProImgArray;
                 parentProductData.name = mainProduct.pd_description;
                 parentProductData.description = mainProduct.pd_description;
+                parentProductData.meta_data = metaData;
 
                 let categoryIdsArray = mainProduct.category_ids.split(',').map(id => id.trim());
                 console.log("cat array:", categoryIdsArray)
@@ -384,19 +411,14 @@ module.exports.getAllProductUsingOrderwise = async (requestBody) => {
                     let oprtionArray = []
                     let atrributeData = await finddAttributesWithObj(mainAtrributeresponse.data, attribute)
                     try {
-                        let termsArray = await WooCommerce.get(`products/attributes/${atrributeData.id}/terms`);
-                        console.log("term array", termsArray.data)
-                        if (termsArray.data.length > 0) {
-                            termsArray.data.forEach(term => {
-                                oprtionArray.push(term.name)
-                            })
-                        }
+                        let option1Values = await getOptionValuesByName(singleProduct.variants, `option_name_${attributePosition + 1}`);
+                        oprtionArray = option1Values;
                     }
                     catch (error) {
                         console.log("error", error)
+                        throw new BadRequestException('Failed to get terms');
                     }
 
-                    console.log("array", oprtionArray)
                     let data = {
                         "id": atrributeData.id,
                         "name": atrributeData.name,
@@ -408,12 +430,9 @@ module.exports.getAllProductUsingOrderwise = async (requestBody) => {
 
                     attributeArray.push(data);
                     attributePosition++
-                    console.log("att data: ", atrributeData)
                 }
-                parentProductData.attributes = attributeArray;
 
-                console.log("att data: ", attributeArray)
-                console.log("data", parentProductData)
+                parentProductData.attributes = attributeArray;
 
                 let newCreatedProduct = null;
 
@@ -422,6 +441,7 @@ module.exports.getAllProductUsingOrderwise = async (requestBody) => {
                     console.log(newCreatedProduct.data);
                 } catch (error) {
                     console.error(error);
+                    throw new BadRequestException('Failed to add product into Woocommerce');
                 }
 
                 if (newCreatedProduct.data.id) {
@@ -431,10 +451,16 @@ module.exports.getAllProductUsingOrderwise = async (requestBody) => {
                         let data = {
                             sku: `ow_${mainProduct.pd_id}_${newCreatedProduct.data.id}`
                         }
+
+                        await delay(1000);
+
                         const updateProductSku = await WooCommerce.put(`products/${newCreatedProduct.data.id}`, data);
+
                         console.log(updateProductSku.data);
                     } catch (error) {
                         console.error(error);
+                        await WooCommerce.delete(`products/${productId}`, { force: true });
+                        throw new BadRequestException('Failed to update product');
                     }
 
                     for (const variantProduct of singleProduct.variants) {
@@ -445,21 +471,31 @@ module.exports.getAllProductUsingOrderwise = async (requestBody) => {
                             attributes: null,
                             stock_quantity: Number(variantProduct.vasq_free_stock_quantity),
                             description: String(variantProduct.vad_description),
-                            image: null
+                            image: null,
+                            manage_stock: true,
+                            meta_data: null
                         };
 
+                        requestdata.meta_data = [
+                            {
+                                key: 'variant_ow_sku',
+                                value: variantProduct.vad_variant_code
+                            }
+        
+                        ];
+
                         if (variantProduct.vwsi_filepath) {
-                            // Setting image properties
-                            const image_name = variantProduct.vwsi_filepath.split("\\").pop();
-                            const imageUrl = `https://glenappin.com/images/product/l/${image_name}`;
-                        
-                            let imageData = {
-                                src: String(imageUrl),
-                                name: String(image_name)
-                            };
-                        
-                            // Add imageData to requestdata if vwsi_filepath is not null
-                            requestdata.image = imageData;
+                            // Step 3: Set image data if available
+                            const image_name = variantProduct?.vwsi_filepath ? variantProduct.vwsi_filepath.split("\\").pop() : null;
+
+                            const imageUrl = image_name ? `https://glenappin.com/images/product/l/${image_name}` : null;
+
+                            if (image_name) {
+                                requestdata.image = { src: imageUrl, name: image_name };
+                            } else {
+                                requestdata.image = null;
+                            }
+
                         }
 
                         const optionNames = [
@@ -469,7 +505,7 @@ module.exports.getAllProductUsingOrderwise = async (requestBody) => {
                             variantProduct.option_name_4
                         ].filter(option => option !== null);
 
-                        
+
                         if (optionNames.length == attributeArray.length) {
                             for (let i = 0; i < optionNames.length; i++) {
                                 let data = {
@@ -480,22 +516,42 @@ module.exports.getAllProductUsingOrderwise = async (requestBody) => {
                                 attributeResponseArray.push(data)
                             }
                         }
-                        console.log("option array lengths:",attributeResponseArray.length);
+                        console.log("option array lengths:", attributeResponseArray.length);
                         requestdata.attributes = attributeResponseArray;
+
                         await delay(1000);
+
                         try {
                             const newCreatedVariations = await WooCommerce.post(`products/${productId}/variations`, requestdata);
-                            // Once the variation is created, proceed to update its SKU
-                            const variationId = newCreatedVariations.data.id; // Assuming 'data.id' contains the new variation's ID
-                            const skuData = {
-                                sku: `ow_${variantProduct.vad_id}_${variationId}`
-                            };
 
-                            // Update the SKU for the newly created variation
-                           await WooCommerce.put(`products/${productId}/variations/${variationId}`, skuData);
-                        }
-                        catch (error) {
-                            console.log("error", error)
+                            // Retrieve the newly created variation's ID
+                            const variationId = newCreatedVariations.data.id; // Assuming 'data.id' contains the new variation's ID
+
+                            if (variationId) {
+                                // Construct SKU data only if variationId exists
+                                const skuData = {
+                                    sku: `ow_${variantProduct.vad_id}_${variationId}`
+                                };
+
+                                // Optional delay, if required for WooCommerce API rate limiting
+                                await delay(1000);
+
+                                try {
+                                    // Update the SKU for the newly created variation
+                                    await WooCommerce.put(`products/${productId}/variations/${variationId}`, skuData);
+                                } catch (error) {
+                                    // Error handling: delete the entire product if SKU update fails
+                                    await WooCommerce.delete(`products/${productId}`, { force: true });
+                                    console.log("error", error);
+                                    throw new BadRequestException('Failed to update product variant into WooCommerce');
+                                }
+                            }
+                        } catch (error) {
+                            // Error handling: delete the entire product if variation creation fails
+                            await WooCommerce.delete(`products/${productId}`, { force: true });
+                            console.log("error", error);
+                            console.log("error product ID:", productId)
+                            throw new BadRequestException('Failed to add product variant into WooCommerce');
                         }
 
                     }
@@ -511,7 +567,7 @@ module.exports.getAllProductUsingOrderwise = async (requestBody) => {
 
         const simpleProductDetails = await compareMismatchedSimpleProducts(orderwiseSimpleProductDetails, woocommerceSecondProductsDetails);
 
-        if(simpleProductDetails.length > 0) {
+        if (simpleProductDetails.length > 0) {
             const cateResponse = await fetchCategoriesWithParentNames();
             for (const singleProduct of simpleProductDetails) {
                 let parentProductData = {
@@ -524,21 +580,34 @@ module.exports.getAllProductUsingOrderwise = async (requestBody) => {
                     images: [],
                     stock_status: "instock",
                     stock_quantity: null,
-                    regular_price: null
+                    regular_price: null,
+                    manage_stock: true,
+                    meta_data: null
                 }
                 let mainProduct = singleProduct
                 let mainProImgArray = [];
 
-                // Setting image properties
-                const mainProductImgName = mainProduct.vwsi_filepath.split("\\").pop();
-                const mainProductImgUrl = `https://glenappin.com/images/product/l/${mainProductImgName}`;
+                parentProductData.meta_data = [
+                        {
+                            key: 'ow_sku',
+                            value: mainProduct.pd_product_code
+                        }
+                ];
 
-                let mainProductImageData = {
-                    src: String(mainProductImgUrl),
-                    name: String(mainProductImgName)
+                if (mainProduct.vwsi_filepath) {
+
+                    const mainProductImgName = mainProduct.vwsi_filepath ? mainProduct.vwsi_filepath.split("\\").pop() : null;
+
+                    const mainProductImgUrl = mainProductImgName ? `https://glenappin.com/images/product/l/${mainProductImgName}` : null;
+
+                    if (mainProductImgName) {
+                        let mainProductImageData = {
+                            src: String(mainProductImgUrl),
+                            name: String(mainProductImgName)
+                        }
+                        mainProImgArray.push(mainProductImageData)
+                    }
                 }
-                
-                mainProImgArray.push(mainProductImageData)
                 parentProductData.images = mainProImgArray;
                 parentProductData.name = mainProduct.pd_description;
                 parentProductData.description = mainProduct.pd_description;
@@ -588,7 +657,7 @@ module.exports.getAllProductUsingOrderwise = async (requestBody) => {
 
             }
         }
-        
+
         const productsAndVariantsFromWoocommerce = await getProductsAndVariantsWithVariableSkuWoocommerce();
 
         const orderwiseSecondProductDetails = await getTenProductsWithVariants();
@@ -620,7 +689,7 @@ module.exports.getAllProductUsingOrderwise = async (requestBody) => {
                 const wooSkuNumber = skuNumberMatch ? parseInt(skuNumberMatch[1], 10) : null;
                 return wooSkuNumber === orderPdId;
             });
-    
+
             if (wooProductData) {
                 // Compare each variant in the WooCommerce product with the orderwise variants
                 for (const orderVariant of orderProduct.variants) {
@@ -629,11 +698,11 @@ module.exports.getAllProductUsingOrderwise = async (requestBody) => {
                         // Extract the first number after "ow_" in the WooCommerce variant SKU
                         const variantSkuMatch = wooVariant.sku.match(/^ow_(\d+)/);
                         const wooVariantSkuNumber = variantSkuMatch ? parseInt(variantSkuMatch[1], 10) : null;
-            
+
                         // Check if this variant matches by SKU format and ID
-                        return orderVariant.vad_id ===  wooVariantSkuNumber
+                        return orderVariant.vad_id === wooVariantSkuNumber
                     });
-            
+
                     if (matchingWooVariant) {
                         const updates = {};
 
@@ -647,7 +716,7 @@ module.exports.getAllProductUsingOrderwise = async (requestBody) => {
                             updates.price = String(orderVariant.vafp_rsp_exc_vat); // Convert to number for WooCommerce update
                         }
 
-            
+
                         // Update WooCommerce if there are changes
                         if (Object.keys(updates).length > 0) {
                             try {
@@ -663,7 +732,7 @@ module.exports.getAllProductUsingOrderwise = async (requestBody) => {
                     }
                 }
             }
-            
+
         }
 
         const simpleProductsFromWoocommerce = await getProductsWithSimpleSkuWoocommerce();
@@ -689,7 +758,7 @@ module.exports.getAllProductUsingOrderwise = async (requestBody) => {
 
         for (const orderProduct of matchingOrderwiseSimpleProducts) {
             const orderPdId = orderProduct.pd_id;
-        
+
             // Find the corresponding WooCommerce product based on SKU
             const wooProductData = simpleProductsFromWoocommerce.find(wooProduct => {
                 const wooSku = wooProduct.sku;
@@ -697,20 +766,20 @@ module.exports.getAllProductUsingOrderwise = async (requestBody) => {
                 const wooSkuNumber = skuNumberMatch ? parseInt(skuNumberMatch[1], 10) : null;
                 return wooSkuNumber === orderPdId;
             });
-        
+
             if (wooProductData && wooProductData.type === "simple") { // Ensure this is a simple product
                 const updates = {};
-        
+
                 // Check for stock change, converting both values to numbers for comparison
                 if (Number(wooProductData.stock_quantity) !== Number(orderProduct.vasq_free_stock_quantity)) {
                     updates.stock_quantity = Number(orderProduct.vasq_free_stock_quantity);
                 }
-        
+
                 // Check for price change, converting both values to numbers for comparison
                 if (Number(wooProductData.price) !== Number(orderProduct.vafp_rsp_exc_vat)) {
                     updates.price = String(orderProduct.vafp_rsp_exc_vat);
                 }
-        
+
                 // Update WooCommerce if there are changes
                 if (Object.keys(updates).length > 0) {
                     try {
@@ -725,7 +794,7 @@ module.exports.getAllProductUsingOrderwise = async (requestBody) => {
                 }
             }
         }
-        
+
 
         return {
             msg: 'Successfully created.',
@@ -741,6 +810,13 @@ module.exports.getAllProductUsingOrderwise = async (requestBody) => {
         }
         throw new BadRequestException('Failed to add product variants');
     }
+};
+
+
+async function getOptionValuesByName(variants, optionKey) {
+    return variants
+        .map(variant => variant[optionKey])
+        .filter(option => option !== null);
 };
 
 async function finddAttributesWithObj(wooCommerceAttributes, attributeName) {
@@ -799,6 +875,36 @@ async function findMismatchedAttributes(wooCommerceAttributes, optionDetails) {
 
     console.log("Mismatch attributes count: ", attMisCount);
     return mismatches;
+}
+
+async function addingAttributesTermsWithDescription(options, attributeId) {
+    for (const option of options) {
+
+        let data = {
+            name: option.name,
+            description: option.image ? `https://glenappin.com/images/option_value/source/${option.image}` : ""
+        };
+
+        try {
+            let response = await WooCommerce.post(`products/attributes/${attributeId}/terms`, data);
+            console.log("Term added:", option);
+        } catch (error) {
+            try {
+                // Delete the attribute if adding a term fails
+                await WooCommerce.delete(`products/attributes/${attributeId}`);
+                console.error(`Failed to add term: ${option}`);
+
+                if (error.response && error.response.data) {
+                    console.error(error.response.data);
+                } else {
+                    console.error(error);
+                }
+                throw new BadRequestException('Failed to add terms');
+            } catch (deleteError) {
+                console.error("Failed to delete attribute:", deleteError);
+            }
+        }
+    }
 }
 
 async function addingAttributesTerms(options, attributeId) {
@@ -882,6 +988,7 @@ async function addingAttributesTerms(options, attributeId) {
 //     console.log("Total matches found:", matchesCount);
 //     return mismatches;  // Return the list of mismatched categories
 // }
+
 async function findMismatchedCategories(wooCommerceCategories, categoriesDetails) {
     const mismatches = [];
     let matchesCount = 0;
@@ -1072,18 +1179,18 @@ async function findCategoryWithObj(wooCommerceCategories, parentCategory) {
         for (const category of catArray) {
             const catParentName = category.parent_name ? normalizeString(category.parent_name) : null;
             const parentDescription = normalizeString(parentCategory.parent_description);
-    
+
             // Skip if parent_name is null or empty
             if (!catParentName) {
                 continue; // Move to the next category
             }
-    
+
             // Perform the includes() check only if parentDescription is not null
             if (parentDescription && catParentName.includes(parentDescription)) {
                 return category.id;
             }
         }
-    }    
+    }
 
     console.log(`No matches found for: ${parentCategory.ctn_description}`);
     return null; // Return null if no match is found
@@ -1178,6 +1285,7 @@ const normalizeString = (str) => {
 //         console.error("Error fetching categories with parent names:", error.response ? error.response.data : error.message);
 //     }
 // }
+
 async function fetchCategoriesWithParentNames() {
     const allCategories = [];
     let page = 1;
@@ -1237,7 +1345,7 @@ async function getProductsFromWoocommerce() {
         const pageNumbers = Array.from({ length: totalPages - 1 }, (_, i) => i + 2);
 
         // Fetch remaining pages in parallel with retry logic
-        const requests = pageNumbers.map(pageNum => 
+        const requests = pageNumbers.map(pageNum =>
             fetchWithRetry("products", { per_page: perPage, page: pageNum })
         );
 
@@ -1258,7 +1366,7 @@ async function getProductsFromWoocommerce() {
     }
 }
 
-async function getProductsAndVariantsFromWoocommerce () {
+async function getProductsAndVariantsFromWoocommerce() {
     const allProducts = [];
     let productsWithVariants = [];
     let page = 1;
@@ -1320,6 +1428,47 @@ async function getProductsAndVariantsFromWoocommerce () {
     }
 };
 
+async function getTermsFromWoocommerce(attributeId) {
+    try {
+        const allTerms = [];
+        const perPage = 100;
+        let page = 1;
+
+        // Initial request to get total pages and the first set of terms
+        const initialResponse = await fetchWithRetry(`products/attributes/${attributeId}/terms`, {
+            per_page: perPage,
+            page: page
+        });
+
+        // Check for total pages from headers if available
+        const totalPages = parseInt(initialResponse.headers['x-wp-totalpages'], 10);
+        allTerms.push(...initialResponse.data);
+
+        // Create an array of page numbers to fetch in parallel
+        const pageNumbers = Array.from({ length: totalPages - 1 }, (_, i) => i + 2);
+
+        // Fetch remaining pages in parallel with retry logic
+        const requests = pageNumbers.map(pageNum =>
+            fetchWithRetry(`products/attributes/${attributeId}/terms`, { per_page: perPage, page: pageNum })
+        );
+
+        // Await all responses and gather terms data
+        const responses = await Promise.all(requests);
+        responses.forEach(response => allTerms.push(...response.data));
+
+        console.log(`Total terms fetched for attribute ${attributeId}:`, allTerms.length);
+        return allTerms;
+
+    } catch (error) {
+        if (error.response && error.response.data) {
+            console.error("API Response Error:", error.response.data);
+        } else {
+            console.error("Error:", error.message);
+        }
+        throw new Error(`Failed to retrieve terms for attribute ${attributeId}`);
+    }
+}
+
 function delay(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
@@ -1348,7 +1497,7 @@ async function getTenProductsWithVariants() {
             }
         ];
 
-        const productDetails = await axios.post(`http://31.216.7.186/OWAPItest/system/export-definition/66`, data, {
+        const productDetails = await axios.post(`http://31.216.7.186/OWAPItest/system/export-definition/70`, data, {
             headers: {
                 "Authorization": `Bearer ${process.env.TOKEN}`,
                 "Content-Type": "application/json"
@@ -1373,7 +1522,7 @@ async function getTenProductsWithVariants() {
         });
 
         // Get the first 10 unique products and their variants
-        const first10UniqueProducts = Array.from(productMap.values()).slice(0, 10);
+        const first10UniqueProducts = Array.from(productMap.values()).slice(0, 100);
         return first10UniqueProducts
 
     } catch (error) {
@@ -1407,7 +1556,7 @@ async function compareMismatchedProducts(orderwiseProducts, woocommerceProducts)
         // Filter out matched OrderWise products
         const remainingOrderwiseProducts = orderwiseProducts.filter(orderwiseProduct => {
             const orderwisePdId = String(orderwiseProduct.mainProduct.pd_id); // Convert pd_id to string
-            
+
             // Log the comparison status
             const isMatched = wooCommercePdIds.includes(orderwisePdId);
 
@@ -1425,6 +1574,7 @@ async function compareMismatchedProducts(orderwiseProducts, woocommerceProducts)
         throw new BadRequestException('Failed to compare products');
     }
 }
+
 async function compareMismatchedSimpleProducts(orderwiseProducts, woocommerceProducts) {
     try {
         // Extract WooCommerce product SKUs and map them to the 'pd_id' format (as strings)
@@ -1446,7 +1596,7 @@ async function compareMismatchedSimpleProducts(orderwiseProducts, woocommercePro
         // Filter out matched OrderWise products
         const remainingOrderwiseProducts = orderwiseProducts.filter(orderwiseProduct => {
             const orderwisePdId = String(orderwiseProduct.pd_id); // Convert pd_id to string
-            
+
             // Log the comparison status
             const isMatched = wooCommercePdIds.includes(orderwisePdId);
 
@@ -1465,7 +1615,7 @@ async function compareMismatchedSimpleProducts(orderwiseProducts, woocommercePro
     }
 }
 
-async function getTenSimpleProductOWNew(){
+async function getTenSimpleProductOWNew() {
     try {
         const data = [
             {
@@ -1480,10 +1630,11 @@ async function getTenSimpleProductOWNew(){
                 "Content-Type": "application/json"
             }
         });
-        const firstTenProducts = productDetails.data.slice(0, 10);
+
+        const firstTenProducts = productDetails.data.slice(0, 50);
 
         return firstTenProducts
-            
+
 
     } catch (error) {
         if (error.response && error.response.data) {
@@ -1501,7 +1652,7 @@ async function getProductsAndVariantsWithVariableSkuWoocommerce() {
 
     // Filter to get only products that are of type "variable" and have an SKU containing "ow" in mainProduct
     const productsWithSkuContainingOw = productsAndVariantsFromWoocommerce
-        .filter(productData => 
+        .filter(productData =>
             productData.mainProduct &&
             productData.mainProduct.sku &&
             productData.mainProduct.sku.includes("ow") &&
@@ -1521,7 +1672,7 @@ async function getProductsWithSimpleSkuWoocommerce() {
 
     // Filter to get only products that are of type "variable" and have an SKU containing "ow"
     const productsWithSkuContainingOw = productsFromWoocommerce
-        .filter(productData => 
+        .filter(productData =>
             productData &&
             productData.sku &&
             productData.sku.includes("ow") &&

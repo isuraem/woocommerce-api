@@ -5,20 +5,13 @@ const he = require('he');
 
 module.exports.getProduct = async () => {
     try {
-
-        const orderwiseProductDetails = await getTenSimpleProductOWNew();
-
         const woocommerceProductsDetails = await getProductsFromWoocommerce();
 
-        console.log("orderwise data length: ", orderwiseProductDetails.length)
-        console.log("woocommerce data length: ", woocommerceProductsDetails.length)
-        const productDetails = await compareMismatchedProducts(orderwiseProductDetails,woocommerceProductsDetails);
-
-        console.log("length of products: ",productDetails.length)
+        console.log("length of products: ",woocommerceProductsDetails)
 
         return {
             msg: 'Successfully get order details',
-            data: productDetails
+            data: woocommerceProductsDetails
         };
 
     } catch (error) {
@@ -179,7 +172,7 @@ module.exports.getManyProductInOrderwise = async () => {
             }
         ];
 
-        const productDetails = await axios.post(`http://31.216.7.186/OWAPItest/system/export-definition/66`, data, {
+        const productDetails = await axios.post(`http://31.216.7.186/OWAPItest/system/export-definition/70`, data, {
             headers: {
                 "Authorization": `Bearer ${process.env.TOKEN}`,
                 "Content-Type": "application/json"
@@ -205,8 +198,10 @@ module.exports.getManyProductInOrderwise = async () => {
         });
 
         // Get the first 10 unique products and their variants
-        const first10UniqueProducts = Array.from(productMap.values()).slice(0, 10);
-        console.log("length :", first10UniqueProducts[0].variants.length)
+        const first10UniqueProducts = Array.from(productMap.values()).slice(0, 1);
+        const option1Values = getOptionValuesByName(first10UniqueProducts[0].variants, 'option_name_1');
+
+        console.log("values :", option1Values)
         return {
             msg: 'Successfully retrieved first 10 unique products with variants',
             data: first10UniqueProducts
@@ -221,6 +216,13 @@ module.exports.getManyProductInOrderwise = async () => {
         throw new BadRequestException('Failed to get product details');
     }
 };
+
+const getOptionValuesByName = (variants, optionKey) => {
+    return variants
+        .map(variant => variant[optionKey])  // Map each variant to the specified option key
+        .filter(option => option !== null);  // Filter out null values
+};
+
 
 module.exports.createSaleOrderToOW = async (requestBody) => {
     try {
@@ -470,5 +472,37 @@ async function fetchWithRetry(url, options = {}, retries = 3, delayMs = 1000) {
 }
 
 
+module.exports.editMetaData = async (req) => {
+    try {
+        // Extract productId and owSkuValue from the request body
+        const { productId, owSkuValue } = req.body;
 
+        // Ensure both values are provided
+        if (!productId || !owSkuValue) {
+            throw new BadRequestException('Product ID and ow_sku value are required');
+        }
 
+        // Update the product's metadata with the `ow_sku` key and provided value
+        const response = await WooCommerce.put(`products/${productId}`, {
+            meta_data: [
+                {
+                    key: 'ow_sku',
+                    value: owSkuValue
+                }
+            ]
+        });
+
+        return {
+            msg: `Successfully updated product ${productId} with ow_sku`,
+            data: response.data
+        };
+
+    } catch (error) {
+        if (error.response && error.response.data) {
+            console.error(error.response.data);
+        } else {
+            console.error(error);
+        }
+        throw new BadRequestException(`Failed to update product ${productId} metadata`);
+    }
+};
