@@ -120,7 +120,7 @@ module.exports.getOrderWoocommerce = async (requestBody) => {
         
         return {
             msg: 'Successfully retrieved order details and matching variants',
-            data: matchingVariantsData // Return the matching variants for all line items
+            data: matchingVariantsData 
         };
 
     } catch (error) {
