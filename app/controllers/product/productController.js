@@ -48,7 +48,7 @@ module.exports.addProductUsingOrderwise = async (req, res) => {
 module.exports.getAllProductUsingOrderwise = async (req, res) => {
 	try {
 		const serviceResponse = await productService.getAllProductUsingOrderwise(req.body);
-		return res.status(200).json({ success: true, msg: serviceResponse.msg , showMessage:false, data:  serviceResponse.data });
+		return res.status(200).json({ success: true, msg: serviceResponse.msg , showMessage:false });
 	} catch (err) {
 		Logger.log('getAllProductUsingOrderwise', null, null,err);
 		return res.status(err.status || ResponseStatusCodes.INTERNAL_SERVER_ERROR).json({ success: false, msg: err.msg || ResponseCommonMessages.INTERNAL_SERVER_ERROR });

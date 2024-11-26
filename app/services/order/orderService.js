@@ -23,9 +23,9 @@ module.exports.getOrderWoocommerce = async (requestBody) => {
         console.log("dilvery data ", deliveryAddress)
 
         // Fetch the product and variant data (assuming this returns a list of products with variants)
-        const productAndVariantsData = await getTenProductsWithVariantsOW();
+        const productAndVariantsData = await getProductsWithVariantsOw();
 
-        const simpleProductData = await getTenSimpleProductOW();
+        const simpleProductData = await getSimpleProductOW();
 
         // Initialize an array to store the results for all line items
         const matchingVariantsData = [];
@@ -57,6 +57,7 @@ module.exports.getOrderWoocommerce = async (requestBody) => {
         let OrderGross = 0;
         let LineItems = [];
         let itemNumber = 0;
+
         for(const product of matchingVariantsData) {
             OrderGross =+ product.line_item.subtotal;
              // Parse the JSON string into an array of objects
@@ -75,6 +76,7 @@ module.exports.getOrderWoocommerce = async (requestBody) => {
             }
             LineItems.push(data)
         }
+
         let today = new Date();
         let datePart = today.toISOString().slice(2, 8).replace(/-/g, ""); // YYMMDD format
         let timePart = `${String(today.getHours()).padStart(2, '0')}${String(today.getMinutes()).padStart(2, '0')}${String(today.getSeconds()).padStart(2, '0')}`;
@@ -109,7 +111,7 @@ module.exports.getOrderWoocommerce = async (requestBody) => {
             orderLines: LineItems,
             
         }
-
+ 
         try{
             await addSaleOrderIntoOW(saleOrderData, session_id);
 
@@ -256,7 +258,7 @@ module.exports.addOrderOW = async (requestBody) => {
 };
 
 
-async function getTenProductsWithVariantsOW() {
+async function getProductsWithVariantsOw() {
     try {
         const data = [
             {
@@ -265,7 +267,7 @@ async function getTenProductsWithVariantsOW() {
             }
         ];
 
-        const productDetails = await axios.post(`http://31.216.7.186/OWAPItest/system/export-definition/70`, data, {
+        const productDetails = await axios.post(`http://31.216.7.186/OWAPItest/system/export-definition/75`, data, {
             headers: {
                 "Authorization": `Bearer ${process.env.TOKEN}`,
                 "Content-Type": "application/json"
@@ -290,7 +292,7 @@ async function getTenProductsWithVariantsOW() {
         });
 
         return Array.from(productMap.values());
-        
+
     } catch (error) {
         if (error.response && error.response.data) {
             console.error(error.response.data);
@@ -301,7 +303,7 @@ async function getTenProductsWithVariantsOW() {
     }
 }
 
-async function getTenSimpleProductOW(){
+async function getSimpleProductOW(){
     try {
         const data = [
             {
@@ -310,7 +312,7 @@ async function getTenSimpleProductOW(){
             }
         ];
 
-        const productDetails = await axios.post(`http://31.216.7.186/OWAPItest/system/export-definition/71`, data, {
+        const productDetails = await axios.post(`http://31.216.7.186/OWAPItest/system/export-definition/76`, data, {
             headers: {
                 "Authorization": `Bearer ${process.env.TOKEN}`,
                 "Content-Type": "application/json"
