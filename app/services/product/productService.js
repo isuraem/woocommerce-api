@@ -214,20 +214,34 @@ module.exports.getAllProductUsingOrderwise = async (requestBody) => {
 
         const categoryResponse = await fetchCategoriesWithParentNames();
 
-        const optionDetails = await axios.post(`http://31.216.7.186/OWAPItest/system/export-definition/69`, data, {
+        // Using for testing
+        // const optionDetails = await axios.post(`http://31.216.7.186/OWAPItest/system/export-definition/69`, data, {
+        //     headers: {
+        //         "Authorization": `Bearer ${process.env.TOKEN}`,
+        //         "Content-Type": "application/json"
+        //     }
+        // })
+
+        // const categoryDetails = await axios.post(`http://31.216.7.186/OWAPItest/system/export-definition/57`, data, {
+        //     headers: {
+        //         "Authorization": `Bearer ${process.env.TOKEN}`,
+        //         "Content-Type": "application/json"
+        //     }
+        // })
+
+        const optionDetails = await axios.post(`http://31.216.7.186/OWAPI/system/export-definition/40`, data, {
             headers: {
                 "Authorization": `Bearer ${process.env.TOKEN}`,
                 "Content-Type": "application/json"
             }
         })
 
-        const categoryDetails = await axios.post(`http://31.216.7.186/OWAPItest/system/export-definition/57`, data, {
+        const categoryDetails = await axios.post(`http://31.216.7.186/OWAPI/system/export-definition/41`, data, {
             headers: {
                 "Authorization": `Bearer ${process.env.TOKEN}`,
                 "Content-Type": "application/json"
             }
         })
-
 
         const mismatchData = await findMismatchedAttributes(mainAtrributeresponse.data, optionDetails.data)
         const misMatchCateData = await findMismatchedCategories(categoryResponse, categoryDetails.data)
@@ -1238,7 +1252,15 @@ async function getProductsWithVariantsOw() {
             }
         ];
 
-        const productDetails = await axios.post(`http://31.216.7.186/OWAPItest/system/export-definition/75`, data, {
+        // Using for testing
+        // const productDetails = await axios.post(`http://31.216.7.186/OWAPItest/system/export-definition/75`, data, {
+        //     headers: {
+        //         "Authorization": `Bearer ${process.env.TOKEN}`,
+        //         "Content-Type": "application/json"
+        //     }
+        // });
+
+        const productDetails = await axios.post(`http://31.216.7.186/OWAPI/system/export-definition/42`, data, {
             headers: {
                 "Authorization": `Bearer ${process.env.TOKEN}`,
                 "Content-Type": "application/json"
@@ -1262,10 +1284,12 @@ async function getProductsWithVariantsOw() {
             }
         });
 
-        // Get the first 10 unique products and their variants
-        // const first10UniqueProducts = Array.from(productMap.values()).slice(0, 100);
+        //for testing
+        // return Array.from(productMap.values())
 
-        return Array.from(productMap.values())
+        // Get the first 10 unique products and their variants
+        const first10UniqueProducts = Array.from(productMap.values()).slice(0, 60);
+        return first10UniqueProducts
 
     } catch (error) {
         if (error.response && error.response.data) {
@@ -1374,17 +1398,26 @@ async function getSimpleProductOWNew() {
                 value: null
             }
         ];
+        // Using for testing
+        // const productDetails = await axios.post(`http://31.216.7.186/OWAPItest/system/export-definition/76`, data, {
+        //     headers: {
+        //         "Authorization": `Bearer ${process.env.TOKEN}`,
+        //         "Content-Type": "application/json"
+        //     }
+        // });
 
-        const productDetails = await axios.post(`http://31.216.7.186/OWAPItest/system/export-definition/76`, data, {
+        // return productDetails.data
+
+        const productDetails = await axios.post(`http://31.216.7.186/OWAPI/system/export-definition/43`, data, {
             headers: {
                 "Authorization": `Bearer ${process.env.TOKEN}`,
                 "Content-Type": "application/json"
             }
         });
 
-        // const firstTenProducts = productDetails.data.slice(0, 50);
+        const firstTenProducts = productDetails.data.slice(0, 60);
 
-        return productDetails.data
+        return firstTenProducts
 
 
     } catch (error) {
