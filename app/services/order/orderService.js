@@ -86,7 +86,7 @@ module.exports.getOrderWoocommerce = async (requestBody) => {
         
         let saleOrderData = {
             customer : {
-                id : 1375
+                id : 1459
             },
             orderHeader: {
                 systemOrderType: 1,
@@ -144,13 +144,21 @@ async function addSaleOrderIntoOW(saleOrderDetails, sessionId) {
     try {
        
         console.log("Validated Data", saleOrderDetails);
+        //using for testing
+        // const addingorder = await axios.post(`http://31.216.7.186/OWAPItest/sales/order?session_id=${sessionId}`, saleOrderDetails, {
+        //     headers: {
+        //         "Authorization": `Bearer ${process.env.TOKEN}`,
+        //         "Content-Type": "application/json"
+        //     }
+        // });
 
-        const addingorder = await axios.post(`http://31.216.7.186/OWAPItest/sales/order?session_id=${sessionId}`, saleOrderDetails, {
+        const addingorder = await axios.post(`http://31.216.7.186/OWAPI/sales/order?session_id=${sessionId}`, saleOrderDetails, {
             headers: {
                 "Authorization": `Bearer ${process.env.TOKEN}`,
                 "Content-Type": "application/json"
             }
         });
+
 
         return addingorder.data
         console.log("data", addingorder)
@@ -178,13 +186,20 @@ async function addOrderIntoOW(requestBody) {
 
         console.log("Validated Data", requestBody);
 
-        const addingorder = await axios.post(`http://31.216.7.186/OWAPItest/purchasing/purchase-orders`, requestBody, {
+        //using for testing
+        // const addingorder = await axios.post(`http://31.216.7.186/OWAPItest/purchasing/purchase-orders`, requestBody, {
+        //     headers: {
+        //         "Authorization": `Bearer ${process.env.TOKEN}`,
+        //         "Content-Type": "application/json"
+        //     }
+        // });
+
+        const addingorder = await axios.post(`http://31.216.7.186/OWAPI/purchasing/purchase-orders`, requestBody, {
             headers: {
                 "Authorization": `Bearer ${process.env.TOKEN}`,
                 "Content-Type": "application/json"
             }
         });
-
         return addingorder.data
         console.log("data", addingorder)
 
@@ -203,13 +218,20 @@ async function reduceVariantStock(requestBody) {
 
         console.log("Validated Data", requestBody);
 
-        const addingorder = await axios.post(`http://31.216.7.186/OWAPITest/stock/adjust-stock-out`, requestBody, {
+        //using for testing
+        // const addingorder = await axios.post(`http://31.216.7.186/OWAPITest/stock/adjust-stock-out`, requestBody, {
+        //     headers: {
+        //         "Authorization": `Bearer ${process.env.TOKEN}`,
+        //         "Content-Type": "application/json"
+        //     }
+        // });
+
+        const addingorder = await axios.post(`http://31.216.7.186/OWAPI/stock/adjust-stock-out`, requestBody, {
             headers: {
                 "Authorization": `Bearer ${process.env.TOKEN}`,
                 "Content-Type": "application/json"
             }
         });
-
 
     } catch (error) {
         if (error.response && error.response.data) {
@@ -233,8 +255,15 @@ module.exports.addOrderOW = async (requestBody) => {
         requestBody.lines[0].dateRequired = formattedDate;
 
         console.log("Validated Data", requestBody);
+        //using for testing
+        // const addingorder = await axios.post(`http://31.216.7.186/OWAPItest/purchasing/purchase-orders`, requestBody, {
+        //     headers: {
+        //         "Authorization": `Bearer ${process.env.TOKEN}`,
+        //         "Content-Type": "application/json"
+        //     }
+        // });
 
-        const addingorder = await axios.post(`http://31.216.7.186/OWAPItest/purchasing/purchase-orders`, requestBody, {
+        const addingorder = await axios.post(`http://31.216.7.186/OWAPI/purchasing/purchase-orders`, requestBody, {
             headers: {
                 "Authorization": `Bearer ${process.env.TOKEN}`,
                 "Content-Type": "application/json"
@@ -267,7 +296,14 @@ async function getProductsWithVariantsOw() {
             }
         ];
 
-        const productDetails = await axios.post(`http://31.216.7.186/OWAPItest/system/export-definition/75`, data, {
+        // const productDetails = await axios.post(`http://31.216.7.186/OWAPItest/system/export-definition/75`, data, {
+        //     headers: {
+        //         "Authorization": `Bearer ${process.env.TOKEN}`,
+        //         "Content-Type": "application/json"
+        //     }
+        // });
+
+        const productDetails = await axios.post(`http://31.216.7.186/OWAPI/system/export-definition/42`, data, {
             headers: {
                 "Authorization": `Bearer ${process.env.TOKEN}`,
                 "Content-Type": "application/json"
@@ -312,12 +348,21 @@ async function getSimpleProductOW(){
             }
         ];
 
-        const productDetails = await axios.post(`http://31.216.7.186/OWAPItest/system/export-definition/76`, data, {
+        //using for testing
+        // const productDetails = await axios.post(`http://31.216.7.186/OWAPItest/system/export-definition/76`, data, {
+        //     headers: {
+        //         "Authorization": `Bearer ${process.env.TOKEN}`,
+        //         "Content-Type": "application/json"
+        //     }
+        // });
+
+        const productDetails = await axios.post(`http://31.216.7.186/OWAPI/system/export-definition/43`, data, {
             headers: {
                 "Authorization": `Bearer ${process.env.TOKEN}`,
                 "Content-Type": "application/json"
             }
         });
+
         const Products = productDetails.data;
         console.log("length: ", Products.length)
         return productDetails.data
