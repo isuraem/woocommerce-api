@@ -814,6 +814,7 @@ module.exports.getAllProductUsingOrderwise = async (requestBody) => {
             }
         }
 
+        console.log(`Action completed at: ${new Date().toISOString()}`);
 
         return {
             msg: 'Successfully the session',
