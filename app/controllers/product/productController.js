@@ -3,17 +3,6 @@ const { ResponseStatusCodes } = require('./../../util/constants/responseStatusCo
 const { ResponseCommonMessages } = require('./../../util/constants/responseCommonMessages');
 const Logger = require('../../util/logging/logger');
 
-module.exports.addProduct = async (req, res) => {
-	try {
-		const serviceResponse = await productService.addProduct(req.body);
-		return res.status(200).json({ success: true, msg: serviceResponse.msg , showMessage:false, data:  serviceResponse.data });
-	} catch (err) {
-		Logger.log('addProduct', null, null,err);
-		return res.status(err.status || ResponseStatusCodes.INTERNAL_SERVER_ERROR).json({ success: false, msg: err.msg || ResponseCommonMessages.INTERNAL_SERVER_ERROR });
-	}
-};
-
-
 module.exports.addProductVariant = async (req, res) => {
 	try {
 		const serviceResponse = await productService.addProductVariant(req.body);
@@ -45,12 +34,32 @@ module.exports.addProductUsingOrderwise = async (req, res) => {
 	}
 };
 
-module.exports.getAllProductUsingOrderwise = async (req, res) => {
+module.exports.syncPrdouctsInOrderwise = async (req, res) => {
 	try {
-		const serviceResponse = await productService.getAllProductUsingOrderwise(req.body);
+		const serviceResponse = await productService.syncPrdouctsInOrderwise();
 		return res.status(200).json({ success: true, msg: serviceResponse.msg , showMessage:false });
 	} catch (err) {
-		Logger.log('getAllProductUsingOrderwise', null, null,err);
+		Logger.log('syncPrdouctsInOrderwise', null, null,err);
+		return res.status(err.status || ResponseStatusCodes.INTERNAL_SERVER_ERROR).json({ success: false, msg: err.msg || ResponseCommonMessages.INTERNAL_SERVER_ERROR });
+	}
+};
+
+module.exports.addProduct = async (req, res) => {
+	try {
+		const serviceResponse = await productService.addProduct();
+		return res.status(200).json({ success: true, msg: serviceResponse.msg , showMessage:false, data:  serviceResponse.data });
+	} catch (err) {
+		Logger.log('addProduct', null, null,err);
+		return res.status(err.status || ResponseStatusCodes.INTERNAL_SERVER_ERROR).json({ success: false, msg: err.msg || ResponseCommonMessages.INTERNAL_SERVER_ERROR });
+	}
+};
+
+module.exports.updateProductsProperties = async (req, res) => {
+	try {
+		const serviceResponse = await productService.updateProductsProperties();
+		return res.status(200).json({ success: true, msg: serviceResponse.msg , showMessage:false, data:  serviceResponse.data });
+	} catch (err) {
+		Logger.log('updateProductsProperties', null, null,err);
 		return res.status(err.status || ResponseStatusCodes.INTERNAL_SERVER_ERROR).json({ success: false, msg: err.msg || ResponseCommonMessages.INTERNAL_SERVER_ERROR });
 	}
 };
