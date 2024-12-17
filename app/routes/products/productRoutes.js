@@ -5,11 +5,6 @@ module.exports = function (router) {
 	//router controllers 
 	const productController = require('../../controllers/product/productController');
 
-	router.post('/add_product',
-		jsonParser,
-		productController.addProduct
-	);
-
 	router.post('/add_product_variant',
 		jsonParser,
 		productController.addProductVariant
@@ -25,9 +20,20 @@ module.exports = function (router) {
 		productController.addProductUsingOrderwise
 	);
 
-	router.post('/get_all_product_using_orderwise',
+	//Live routes
+	router.post('/sync_products_orderwise',
 		jsonParser,
-		productController.getAllProductUsingOrderwise
+		productController.syncPrdouctsInOrderwise
+	);
+
+	router.post('/add_product',
+		jsonParser,
+		productController.addProduct
+	);
+
+	router.post('/update_product',
+		jsonParser,
+		productController.updateProductsProperties
 	);
 
 };
