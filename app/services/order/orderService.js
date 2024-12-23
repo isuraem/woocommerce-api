@@ -89,7 +89,7 @@ module.exports.getOrderWoocommerce = async (requestBody) => {
                 id : 1459
             },
             orderHeader: {
-                systemOrderType: 1,
+                systemOrderType: 3,
                 deliveryMethodId: 1,
                 orderGross: OrderGross,
                 deliveryGross: totalShippingCost,
