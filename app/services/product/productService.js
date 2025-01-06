@@ -798,7 +798,7 @@ module.exports.addProduct = async () => {
             }
         })
 
-        const categoryDetailsOW = await axios.post(`http://31.216.7.186/OWAPI/system/export-definition/41`, data, {
+        const categoryDetailsOW = await axios.post(`http://31.216.7.186/OWAPI/system/export-definition/45`, data, {
             headers: {
                 "Authorization": `Bearer ${process.env.TOKEN}`,
                 "Content-Type": "application/json"
@@ -862,13 +862,30 @@ module.exports.addProduct = async () => {
                     throw new BadRequestException('Failed to fetch categories');
                 }
 
+                let catImageObj = null
+
+                if (mismatchData.ctnwi_image) {
+
+                    const mismatchDataImgName = mismatchData.ctnwi_image ? mismatchData.ctnwi_image.split("\\").pop() : null;
+
+                    const mismatchDataImgUrl = mismatchDataImgName ? `https://glenappin.com/images/category/l/${mismatchDataImgName}` : null;
+
+                    if (mismatchDataImgName) {
+                        catImageObj = {
+                            src: String(mismatchDataImgUrl),
+                            name: String(mismatchDataImgName)
+                        }
+                    }
+                }
+
                 const newAttribute = {
                     name: mismatchData.ctn_description,
                     slug: `ow_${mismatchData.ctn_description}`,
+                    image: catImageObj
                 };
 
                 if (mismatchData.parent_description) {
-                    const matchedCategory = await categoryDetails.data.find(category => {
+                    const matchedCategory = await categoryDetailsOW.data.find(category => {
                         return mismatchData.ctn_parent_id === category.ctn_id;
                     });
 
@@ -876,7 +893,7 @@ module.exports.addProduct = async () => {
                     // Ensure matchedCategory is found before using it
                     if (matchedCategory) {
                         console.log("matched obj:", matchedCategory)
-                        parentid = await findParentWithObjCategory(cateResponse, matchedCategory);
+                        parentid = await findCategoryWithObj(cateResponse, matchedCategory);
 
                         if (parentid) {
                             let description = mismatchData.parent_description.split(' ').map(word => word[0]).join('')
