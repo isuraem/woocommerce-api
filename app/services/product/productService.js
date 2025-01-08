@@ -786,7 +786,7 @@ module.exports.addProduct = async () => {
             }
         ];
 
-
+        //main attributes
         const mainAtrributeresponse = await WooCommerce.get("products/attributes")
 
         const categoryResponse = await fetchCategoriesWithParentNames();
