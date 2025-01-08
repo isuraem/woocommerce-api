@@ -1183,7 +1183,7 @@ module.exports.addProduct = async () => {
                 parentProductData.meta_data = [
                     {
                         key: 'ow_sku',
-                        value: mainProduct.pd_product_code
+                        value: mainProduct.vad_variant_code
                     }
                 ];
 
@@ -1987,21 +1987,26 @@ async function compareMismatchedProducts(orderwiseProducts, woocommerceProducts)
         if (!orderwiseProducts) {
             return null;
         }
-        // Extract WooCommerce product SKUs and map them to the 'pd_id' format (as strings)
-        const wooCommercePdIds = [...new Set(woocommerceProducts
-            .map(product => {
-                // Check if the SKU exists and is not null
-                if (product.sku && typeof product.sku === 'string') {
-                    const skuParts = product.sku.split('_');
-                    if (skuParts.length === 3) {
-                        return skuParts[1]; // The 'pd_id' part of the SKU
-                    }
-                }
-                return null;
-            })
-            .filter(pdId => pdId !== null))]; // Remove duplicates using Set and convert it back to an array
 
-        console.log("Unique WooCommerce pd_ids:", wooCommercePdIds); // Log WooCommerce pd_ids
+        let wooCommercePdIds = [];
+
+        // Extract WooCommerce product SKUs and map them to the 'pd_id' format (as strings)
+        if(woocommerceProducts.length > 0){
+            wooCommercePdIds = [...new Set(woocommerceProducts
+                .map(product => {
+                    // Check if the SKU exists and is not null
+                    if (product.sku && typeof product.sku === 'string') {
+                        const skuParts = product.sku.split('_');
+                        if (skuParts.length === 3) {
+                            return skuParts[1]; // The 'pd_id' part of the SKU
+                        }
+                    }
+                    return null;
+                })
+                .filter(pdId => pdId !== null))]; // Remove duplicates using Set and convert it back to an array
+    
+            console.log("Unique WooCommerce pd_ids:", wooCommercePdIds); // Log WooCommerce pd_ids
+        }
 
         // Filter out matched OrderWise products
         const remainingOrderwiseProducts = orderwiseProducts.filter(orderwiseProduct => {
@@ -2031,22 +2036,27 @@ async function compareMismatchedSimpleProducts(orderwiseProducts, woocommercePro
         if (!orderwiseProducts) {
             return null;
         }
+        
+        // Extract WooCommerce product SKUs and map them to the 'pd_id' format (as strings)
+        let wooCommercePdIds = [];
 
         // Extract WooCommerce product SKUs and map them to the 'pd_id' format (as strings)
-        const wooCommercePdIds = [...new Set(woocommerceProducts
-            .map(product => {
-                // Check if the SKU exists and is not null
-                if (product.sku && typeof product.sku === 'string') {
-                    const skuParts = product.sku.split('_');
-                    if (skuParts.length === 3) {
-                        return skuParts[1]; // The 'pd_id' part of the SKU
+        if(woocommerceProducts.length > 0){
+            wooCommercePdIds = [...new Set(woocommerceProducts
+                .map(product => {
+                    // Check if the SKU exists and is not null
+                    if (product.sku && typeof product.sku === 'string') {
+                        const skuParts = product.sku.split('_');
+                        if (skuParts.length === 3) {
+                            return skuParts[1]; // The 'pd_id' part of the SKU
+                        }
                     }
-                }
-                return null;
-            })
-            .filter(pdId => pdId !== null))]; // Remove duplicates using Set and convert it back to an array
-
-        console.log("Unique WooCommerce pd_ids:", wooCommercePdIds); // Log WooCommerce pd_ids
+                    return null;
+                })
+                .filter(pdId => pdId !== null))]; // Remove duplicates using Set and convert it back to an array
+    
+            console.log("Unique WooCommerce pd_ids:", wooCommercePdIds); // Log WooCommerce pd_ids
+        }
 
         // Filter out matched OrderWise products
         const remainingOrderwiseProducts = orderwiseProducts.filter(orderwiseProduct => {
